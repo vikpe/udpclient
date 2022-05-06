@@ -52,7 +52,7 @@ func (c Client) SendCommand(address string, command Command) ([]byte, error) {
 
 	isValidResponseHeader := bytes.Equal(header, command.ResponseHeader)
 	if !isValidResponseHeader {
-		err = errors.New(address + ": Invalid response header.")
+		err = errors.New(address + ": Invalid response header")
 		return nil, err
 	}
 
