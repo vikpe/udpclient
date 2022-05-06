@@ -1,4 +1,4 @@
-# UDP Client [![Go Reference](https://pkg.go.dev/badge/github.com/vikpe/udpclient.svg)](https://pkg.go.dev/github.com/vikpe/udpclient)
+# UDP Client [![Go Reference](https://pkg.go.dev/badge/github.com/vikpe/udpclient.svg)](https://pkg.go.dev/github.com/vikpe/udpclient) [![Test](https://github.com/vikpe/udpclient/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/vikpe/udpclient/actions/workflows/test.yml) [![codecov](https://codecov.io/gh/vikpe/udpclient/branch/main/graph/badge.svg?token=nW6fiGr7hJ)](https://codecov.io/gh/vikpe/udpclient)
 > UDP client for Go
 
 
