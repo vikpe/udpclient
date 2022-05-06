@@ -37,6 +37,17 @@ func TestClient_SendPacket(t *testing.T) {
 }
 
 func TestClient_SendCommand(t *testing.T) {
+	t.Run("Unknown host", func(t *testing.T) {
+		client := udpclient.New()
+		command := udpclient.Command{
+			RequestPacket:  []byte("HELLO WORLD"),
+			ResponseHeader: []byte("OK: "),
+		}
+		response, err := client.SendCommand("foo:666", command)
+		assert.Equal(t, []byte{}, response)
+		assert.EqualError(t, err, "dial udp4: lookup foo: no such host")
+	})
+
 	testCases := []struct {
 		testName             string
 		port                 int
@@ -61,7 +72,7 @@ func TestClient_SendCommand(t *testing.T) {
 				RequestPacket:  []byte("HELLO WORLD"),
 				ResponseHeader: []byte("NOT OK: "),
 			},
-			nil,
+			[]byte{},
 			errors.New(":9001: Invalid response header"),
 		},
 	}
