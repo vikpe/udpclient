@@ -60,7 +60,7 @@ func (c Client) SendCommand(address string, command Command) ([]byte, error) {
 func (c Client) SendPacket(address string, packet []byte) ([]byte, error) {
 	conn, err := net.Dial("udp4", address)
 	if err != nil {
-		return nil, err
+		return []byte{}, err
 	}
 	defer conn.Close()
 
