@@ -7,9 +7,9 @@ import (
 	"time"
 )
 
-type UdpClient interface {
-	Request(address string, statusPacket []byte, expectedResponseHeader []byte) ([]byte, error)
-	GetConfig() Config
+type Command struct {
+	RequestPacket  []byte
+	ResponseHeader []byte
 }
 
 type Config struct {
@@ -18,47 +18,74 @@ type Config struct {
 	TimeoutInMs uint16
 }
 
-type defaultClient struct {
+type Sender interface {
+	SendCommand(address string, command Command) ([]byte, error)
+	SendPacket(address string, packet []byte) ([]byte, error)
+	GetConfig() Config
+}
+
+type Client struct {
 	config Config
 }
 
-func New() *defaultClient {
-	defaultConfig := Config{
+func New() *Client {
+	var config = Config{
 		BufferSize:  8192,
 		Retries:     3,
 		TimeoutInMs: 500,
 	}
-	return NewWithConfig(defaultConfig)
+
+	return NewWithConfig(config)
 }
 
-func NewWithConfig(config Config) *defaultClient {
-	return &defaultClient{config: config}
+func NewWithConfig(config Config) *Client {
+	return &Client{config: config}
 }
 
-func (c defaultClient) GetConfig() Config {
+func (c Client) GetConfig() Config {
 	return c.config
 }
 
-func (c defaultClient) Request(address string, statusPacket []byte, expectedResponseHeader []byte) ([]byte, error) {
+func (c Client) SendCommand(address string, command Command) ([]byte, error) {
+	response, err := c.SendPacket(address, command.RequestPacket)
+
+	if err != nil {
+		return nil, err
+	}
+
+	headerLength := len(command.ResponseHeader)
+	header := response[0:headerLength]
+
+	isValidResponseHeader := bytes.Equal(header, command.ResponseHeader)
+	if !isValidResponseHeader {
+		err = errors.New(address + ": Invalid response header.")
+		return nil, err
+	}
+
+	responseBody := response[headerLength:]
+
+	return responseBody, nil
+}
+
+func (c Client) SendPacket(address string, packet []byte) ([]byte, error) {
 	conn, err := net.Dial("udp4", address)
 	if err != nil {
 		return nil, err
 	}
 	defer conn.Close()
 
-	config := c.GetConfig()
-	responseBuffer := make([]byte, config.BufferSize)
+	responseBuffer := make([]byte, c.config.BufferSize)
 	responseLength := 0
 
-	for i := uint8(0); i < config.Retries; i++ {
-		conn.SetDeadline(getDeadline(config.TimeoutInMs))
+	for i := uint8(0); i < c.config.Retries; i++ {
+		conn.SetDeadline(getDeadline(c.config.TimeoutInMs))
 
-		_, err = conn.Write(statusPacket)
+		_, err = conn.Write(packet)
 		if err != nil {
 			return nil, err
 		}
 
-		conn.SetDeadline(getDeadline(config.TimeoutInMs))
+		conn.SetDeadline(getDeadline(c.config.TimeoutInMs))
 		responseLength, err = conn.Read(responseBuffer)
 		if err != nil {
 			continue
@@ -71,17 +98,7 @@ func (c defaultClient) Request(address string, statusPacket []byte, expectedResp
 		return nil, err
 	}
 
-	response := responseBuffer[:responseLength]
-	headerLength := len(expectedResponseHeader)
-	header := response[0:headerLength]
-
-	isValidResponseHeader := bytes.Equal(header, expectedResponseHeader)
-	if !isValidResponseHeader {
-		err = errors.New(address + ": Invalid response header.")
-		return nil, err
-	}
-
-	return response[headerLength:], nil
+	return responseBuffer[:responseLength], nil
 }
 
 func getDeadline(timeoutInMs uint16) time.Time {
