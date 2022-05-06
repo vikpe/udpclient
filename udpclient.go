@@ -40,17 +40,13 @@ func (c defaultClient) GetConfig() Config {
 }
 
 func (c defaultClient) Request(address string, statusPacket []byte, expectedResponseHeader []byte) ([]byte, error) {
-	return Request(c, address, statusPacket, expectedResponseHeader)
-}
-
-func Request(client UdpClient, address string, statusPacket []byte, expectedResponseHeader []byte) ([]byte, error) {
 	conn, err := net.Dial("udp4", address)
 	if err != nil {
 		return nil, err
 	}
 	defer conn.Close()
 
-	config := client.GetConfig()
+	config := c.GetConfig()
 	responseBuffer := make([]byte, config.BufferSize)
 	responseLength := 0
 
