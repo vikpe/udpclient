@@ -152,10 +152,17 @@ func ExampleClient_SendPacket() {
 	client := udpclient.New()
 	statusPacket := []byte{0xff, 0xff, 0xff, 0xff, 's', 't', 'a', 't', 'u', 's', ' ', '2', '3', 0x0a}
 
-	response, err := client.SendPacket(
-		"qw.foppa.dk:27502",
-		statusPacket,
-	)
+	response, err := client.SendPacket("qw.foppa.dk:27502", statusPacket)
+	fmt.Println(response, err)
+}
 
+func ExampleClient_SendCommand() {
+	client := udpclient.New()
+	command := udpclient.Command{
+		RequestPacket:  []byte{0xff, 0xff, 0xff, 0xff, 's', 't', 'a', 't', 'u', 's', ' ', '2', '3', 0x0a},
+		ResponseHeader: []byte{0xff, 0xff, 0xff, 0xff, 'n', '\\'},
+	}
+
+	response, err := client.SendCommand("qw.foppa.dk:27502", command)
 	fmt.Println(response, err)
 }
