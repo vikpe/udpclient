@@ -18,12 +18,6 @@ type Config struct {
 	TimeoutInMs uint16
 }
 
-type Sender interface {
-	SendCommand(address string, command Command) ([]byte, error)
-	SendPacket(address string, packet []byte) ([]byte, error)
-	GetConfig() Config
-}
-
 type Client struct {
 	config Config
 }
