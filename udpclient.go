@@ -19,7 +19,7 @@ type Config struct {
 }
 
 type Client struct {
-	config Config
+	Config Config
 }
 
 func New() *Client {
@@ -33,11 +33,7 @@ func New() *Client {
 }
 
 func NewWithConfig(config Config) *Client {
-	return &Client{config: config}
-}
-
-func (c Client) GetConfig() Config {
-	return c.config
+	return &Client{Config: config}
 }
 
 func (c Client) SendCommand(address string, command Command) ([]byte, error) {
@@ -68,18 +64,18 @@ func (c Client) SendPacket(address string, packet []byte) ([]byte, error) {
 	}
 	defer conn.Close()
 
-	responseBuffer := make([]byte, c.config.BufferSize)
+	responseBuffer := make([]byte, c.Config.BufferSize)
 	responseLength := 0
 
-	for i := uint8(0); i < c.config.Retries; i++ {
-		conn.SetDeadline(getDeadline(c.config.TimeoutInMs))
+	for i := uint8(0); i < c.Config.Retries; i++ {
+		conn.SetDeadline(getDeadline(c.Config.TimeoutInMs))
 
 		_, err = conn.Write(packet)
 		if err != nil {
 			return []byte{}, err
 		}
 
-		conn.SetDeadline(getDeadline(c.config.TimeoutInMs))
+		conn.SetDeadline(getDeadline(c.Config.TimeoutInMs))
 		responseLength, err = conn.Read(responseBuffer)
 		if err != nil {
 			continue
