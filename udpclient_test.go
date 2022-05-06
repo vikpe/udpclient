@@ -1,6 +1,10 @@
 package udpclient_test
 
-import "github.com/vikpe/udpclient"
+import (
+	"fmt"
+
+	"github.com/vikpe/udpclient"
+)
 
 func ExampleNewWithConfig() {
 	config := udpclient.Config{
@@ -8,17 +12,19 @@ func ExampleNewWithConfig() {
 		Retries:     0,
 		TimeoutInMs: 800,
 	}
-	udpClient := udpclient.NewWithConfig(config)
+	client := udpclient.NewWithConfig(config)
+
+	fmt.Print(client.GetConfig())
 }
 
-func ExampleClient_Request() {
-	udpClient := udpclient.New()
+func ExampleClient_SendPacket() {
+	client := udpclient.New()
 	statusPacket := []byte{0xff, 0xff, 0xff, 0xff, 's', 't', 'a', 't', 'u', 's', ' ', '2', '3', 0x0a}
-	expectedHeader := []byte{0xff, 0xff, 0xff, 0xff, 'n', '\\'}
 
-	response, err := udpClient.Request(
+	response, err := client.SendPacket(
 		"qw.foppa.dk:27502",
 		statusPacket,
-		expectedHeader,
 	)
+
+	fmt.Println(response, err)
 }
