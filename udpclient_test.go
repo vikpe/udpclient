@@ -45,7 +45,7 @@ func TestClient_SendCommand(t *testing.T) {
 		}
 		response, err := client.SendCommand("foo:666", command)
 		assert.Equal(t, []byte{}, response)
-		assert.EqualError(t, err, "dial udp4: lookup foo: no such host")
+		assert.ErrorContains(t, err, "dial udp4: lookup foo:")
 	})
 
 	testCases := []struct {
