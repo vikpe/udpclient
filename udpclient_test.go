@@ -103,7 +103,7 @@ func ExampleNewWithConfig() {
 	}
 	client := udpclient.NewWithConfig(config)
 
-	fmt.Print(client.GetConfig())
+	fmt.Print(client.Config)
 }
 
 func ExampleClient_SendPacket() {
