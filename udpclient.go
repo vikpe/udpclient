@@ -44,7 +44,7 @@ func (c Client) SendCommand(address string, command Command) ([]byte, error) {
 	response, err := c.SendPacket(address, command.RequestPacket)
 
 	if err != nil {
-		return nil, err
+		return []byte{}, err
 	}
 
 	headerLength := len(command.ResponseHeader)
@@ -53,7 +53,7 @@ func (c Client) SendCommand(address string, command Command) ([]byte, error) {
 	isValidResponseHeader := bytes.Equal(header, command.ResponseHeader)
 	if !isValidResponseHeader {
 		err = errors.New(address + ": Invalid response header")
-		return nil, err
+		return []byte{}, err
 	}
 
 	responseBody := response[headerLength:]
@@ -76,7 +76,7 @@ func (c Client) SendPacket(address string, packet []byte) ([]byte, error) {
 
 		_, err = conn.Write(packet)
 		if err != nil {
-			return nil, err
+			return []byte{}, err
 		}
 
 		conn.SetDeadline(getDeadline(c.config.TimeoutInMs))
@@ -89,7 +89,7 @@ func (c Client) SendPacket(address string, packet []byte) ([]byte, error) {
 	}
 
 	if err != nil {
-		return nil, err
+		return []byte{}, err
 	}
 
 	return responseBuffer[:responseLength], nil
