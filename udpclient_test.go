@@ -20,11 +20,6 @@ func udpListenAndEcho(addr string) {
 	conn.WriteTo([]byte(response), dst)
 }
 
-func udpListen(addr string) {
-	conn, _ := net.ListenPacket("udp", addr)
-	conn.ReadFrom(make([]byte, 1024))
-}
-
 func TestClient_SendPacket(t *testing.T) {
 	t.Run("Unknown host", func(t *testing.T) {
 		client := udpclient.New()
@@ -47,7 +42,7 @@ func TestClient_SendPacket(t *testing.T) {
 		addr := ":8002"
 
 		go func() {
-			udpListen(addr)
+			net.ListenPacket("udp", addr)
 		}()
 
 		time.Sleep(10 * time.Millisecond)
