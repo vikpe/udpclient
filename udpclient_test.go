@@ -3,22 +3,13 @@ package udpclient_test
 import (
 	"errors"
 	"fmt"
-	"net"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/vikpe/udpclient"
+	"github.com/vikpe/udphelper"
 )
-
-func udpListenAndEcho(addr string) {
-	conn, _ := net.ListenPacket("udp", addr)
-	buffer := make([]byte, 1024)
-	messageLength, dst, _ := conn.ReadFrom(buffer)
-	message := buffer[:messageLength]
-	response := "OK: " + string(message)
-	conn.WriteTo([]byte(response), dst)
-}
 
 func TestClient_SendPacket(t *testing.T) {
 	t.Run("Unknown host", func(t *testing.T) {
@@ -31,7 +22,7 @@ func TestClient_SendPacket(t *testing.T) {
 	t.Run("Write timeout", func(t *testing.T) {
 		client := udpclient.New()
 		client.Config.TimeoutInMs = 0
-		response, err := client.SendPacket(":8001", []byte("PING"))
+		response, err := client.SendPacket(":8001", []byte("ping"))
 
 		assert.Equal(t, []byte{}, response)
 		assert.ErrorContains(t, err, "write udp4")
@@ -42,14 +33,13 @@ func TestClient_SendPacket(t *testing.T) {
 		addr := ":8002"
 
 		go func() {
-			net.ListenPacket("udp", addr)
+			udphelper.New(addr).Listen()
 		}()
-
 		time.Sleep(10 * time.Millisecond)
 
 		client := udpclient.New()
 		client.Config.TimeoutInMs = 20
-		response, err := client.SendPacket(":8002", []byte("PING"))
+		response, err := client.SendPacket(":8002", []byte("ping"))
 
 		assert.Equal(t, []byte{}, response)
 		assert.ErrorContains(t, err, "read udp4")
@@ -60,15 +50,14 @@ func TestClient_SendPacket(t *testing.T) {
 		addr := ":8003"
 
 		go func() {
-			udpListenAndEcho(addr)
+			udphelper.New(addr).Echo()
 		}()
-
 		time.Sleep(10 * time.Millisecond)
 
 		client := udpclient.New()
-		response, err := client.SendPacket(addr, []byte("PING"))
+		response, err := client.SendPacket(addr, []byte("ping"))
 
-		assert.Equal(t, "OK: PING", string(response))
+		assert.Equal(t, "ok:ping", string(response))
 		assert.Equal(t, nil, err)
 	})
 }
@@ -78,7 +67,7 @@ func TestClient_SendCommand(t *testing.T) {
 		client := udpclient.New()
 		command := udpclient.Command{
 			RequestPacket:  []byte("HELLO WORLD"),
-			ResponseHeader: []byte("OK: "),
+			ResponseHeader: []byte("ok:"),
 		}
 		response, err := client.SendCommand("foo:666", command)
 		assert.Equal(t, []byte{}, response)
@@ -97,7 +86,7 @@ func TestClient_SendCommand(t *testing.T) {
 			9000,
 			udpclient.Command{
 				RequestPacket:  []byte("HELLO WORLD"),
-				ResponseHeader: []byte("OK: "),
+				ResponseHeader: []byte("ok:"),
 			},
 			[]byte("HELLO WORLD"),
 			nil,
@@ -107,7 +96,7 @@ func TestClient_SendCommand(t *testing.T) {
 			9001,
 			udpclient.Command{
 				RequestPacket:  []byte("HELLO WORLD"),
-				ResponseHeader: []byte("NOT OK: "),
+				ResponseHeader: []byte("not ok: "),
 			},
 			[]byte{},
 			errors.New(":9001: Invalid response header"),
@@ -116,16 +105,17 @@ func TestClient_SendCommand(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.testName, func(t *testing.T) {
-			udpAddress := fmt.Sprintf(":%d", tc.port)
+			addr := fmt.Sprintf(":%d", tc.port)
+			udpServer := udphelper.New(addr)
 
 			go func() {
-				udpListenAndEcho(udpAddress)
+				udpServer.Echo()
 			}()
-
 			time.Sleep(10 * time.Millisecond)
 
 			client := udpclient.New()
-			response, err := client.SendCommand(udpAddress, tc.command)
+			response, err := client.SendCommand(addr, tc.command)
+			assert.Equal(t, tc.command.RequestPacket, udpServer.Requests[0])
 			assert.Equal(t, tc.expectedResponseBody, response)
 			assert.Equal(t, tc.expectedError, err)
 		})
