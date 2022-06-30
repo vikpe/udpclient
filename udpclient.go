@@ -26,7 +26,7 @@ func New() *Client {
 	var config = Config{
 		BufferSize:  8192,
 		Retries:     3,
-		TimeoutInMs: 500,
+		TimeoutInMs: 800,
 	}
 
 	return NewWithConfig(config)
