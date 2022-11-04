@@ -64,31 +64,40 @@ func (c Client) SendPacket(address string, packet []byte) ([]byte, error) {
 	}
 	defer conn.Close()
 
-	responseBuffer := make([]byte, c.Config.BufferSize)
-	responseLength := 0
+	response := bytes.NewBuffer(make([]byte, 0))
+	frameBuffer := make([]byte, c.Config.BufferSize)
+	frameLength := 0
+	shouldRetry := true
 
 	for i := uint8(0); i < c.Config.Retries; i++ {
-		conn.SetDeadline(getDeadline(c.Config.TimeoutInMs))
+		conn.SetWriteDeadline(getDeadline(c.Config.TimeoutInMs))
 
 		_, err = conn.Write(packet)
 		if err != nil {
 			return []byte{}, err
 		}
 
-		conn.SetDeadline(getDeadline(c.Config.TimeoutInMs))
-		responseLength, err = conn.Read(responseBuffer)
-		if err != nil {
-			continue
+		for {
+			conn.SetReadDeadline(getDeadline(c.Config.TimeoutInMs))
+			frameLength, err = conn.Read(frameBuffer)
+
+			if err != nil { // udp error or end of response
+				if response.Len() > 0 {
+					err = nil
+					shouldRetry = false
+				}
+				break
+			} else { // successfully read frame
+				response.Write(frameBuffer[:frameLength])
+			}
 		}
 
-		break
+		if !shouldRetry {
+			break
+		}
 	}
 
-	if err != nil {
-		return []byte{}, err
-	}
-
-	return responseBuffer[:responseLength], nil
+	return response.Bytes(), err
 }
 
 func getDeadline(timeoutInMs uint16) time.Time {
