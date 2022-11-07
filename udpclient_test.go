@@ -1,7 +1,6 @@
 package udpclient_test
 
 import (
-	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -63,63 +62,66 @@ func TestClient_SendPacket(t *testing.T) {
 }
 
 func TestClient_SendCommand(t *testing.T) {
+	helloWorldCommand := udpclient.Command{
+		RequestPacket:  []byte("HELLO WORLD"),
+		ResponseHeader: []byte("hello ok:"),
+	}
+
 	t.Run("Unknown host", func(t *testing.T) {
-		client := udpclient.New()
-		command := udpclient.Command{
-			RequestPacket:  []byte("HELLO WORLD"),
-			ResponseHeader: []byte("ok:"),
-		}
-		response, err := client.SendCommand("foo:666", command)
+		response, err := udpclient.New().SendCommand("foo:666", helloWorldCommand)
 		assert.Equal(t, []byte{}, response)
 		assert.ErrorContains(t, err, "dial udp4: lookup foo:")
 	})
 
-	testCases := []struct {
-		testName             string
-		port                 int
-		command              udpclient.Command
-		expectedResponseBody []byte
-		expectedError        error
-	}{
-		{
-			"Valid response header",
-			9000,
-			udpclient.Command{
-				RequestPacket:  []byte("HELLO WORLD"),
-				ResponseHeader: []byte("ok:"),
-			},
-			[]byte("HELLO WORLD"),
-			nil,
-		},
-		{
-			"Invalid response header",
-			9001,
-			udpclient.Command{
-				RequestPacket:  []byte("HELLO WORLD"),
-				ResponseHeader: []byte("not ok: "),
-			},
-			[]byte{},
-			errors.New(":9001: Invalid response header"),
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.testName, func(t *testing.T) {
-			addr := fmt.Sprintf(":%d", tc.port)
-			udpServer := udphelper.New(addr)
+	t.Run("Invalid repsonse header", func(t *testing.T) {
+		t.Run("shorter than expected", func(t *testing.T) {
+			address := fmt.Sprintf(":%d", 9000)
+			udpServer := udphelper.New(address)
 
 			go func() {
-				udpServer.Echo()
+				udpServer.Respond([]byte("hello"))
 			}()
 			time.Sleep(10 * time.Millisecond)
 
 			client := udpclient.New()
-			response, err := client.SendCommand(addr, tc.command)
-			assert.Equal(t, tc.command.RequestPacket, udpServer.Requests[0])
-			assert.Equal(t, tc.expectedResponseBody, response)
-			assert.Equal(t, tc.expectedError, err)
+			response, err := client.SendCommand(address, helloWorldCommand)
+			assert.Equal(t, helloWorldCommand.RequestPacket, udpServer.Requests[0])
+			assert.Equal(t, []byte{}, response)
+			assert.ErrorContains(t, err, `:9000: Invalid response header, expected "hello ok:"`)
 		})
-	}
+
+		t.Run("not equal to expected", func(t *testing.T) {
+			address := fmt.Sprintf(":%d", 9001)
+			udpServer := udphelper.New(address)
+
+			go func() {
+				udpServer.Respond([]byte("hello fail:"))
+			}()
+			time.Sleep(10 * time.Millisecond)
+
+			client := udpclient.New()
+			response, err := client.SendCommand(address, helloWorldCommand)
+			assert.Equal(t, helloWorldCommand.RequestPacket, udpServer.Requests[0])
+			assert.Equal(t, []byte{}, response)
+			assert.ErrorContains(t, err, `:9001: Invalid response header, expected "hello ok:"`)
+		})
+	})
+
+	t.Run("Valid response header", func(t *testing.T) {
+		address := fmt.Sprintf(":%d", 9002)
+		udpServer := udphelper.New(address)
+
+		go func() {
+			udpServer.Respond([]byte("hello ok:HELLO WORLD"))
+		}()
+		time.Sleep(10 * time.Millisecond)
+
+		client := udpclient.New()
+		response, err := client.SendCommand(address, helloWorldCommand)
+		assert.Equal(t, []byte("HELLO WORLD"), udpServer.Requests[0])
+		assert.Equal(t, []byte("HELLO WORLD"), response)
+		assert.Nil(t, err)
+	})
 }
 
 func ExampleNewWithConfig() {

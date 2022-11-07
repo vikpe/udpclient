@@ -3,6 +3,7 @@ package udpclient
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"net"
 	"time"
 )
@@ -43,18 +44,19 @@ func (c Client) SendCommand(address string, command Command) ([]byte, error) {
 		return []byte{}, err
 	}
 
+	// validate header
+	invalidHeaderError := errors.New(fmt.Sprintf(`%s: Invalid response header, expected "%s"`, address, command.ResponseHeader))
 	headerLength := len(command.ResponseHeader)
-	header := response[0:headerLength]
 
-	isValidResponseHeader := bytes.Equal(header, command.ResponseHeader)
-	if !isValidResponseHeader {
-		err = errors.New(address + ": Invalid response header")
-		return []byte{}, err
+	if len(response) < headerLength {
+		return []byte{}, invalidHeaderError
 	}
 
-	responseBody := response[headerLength:]
+	if !bytes.Equal(response[0:headerLength], command.ResponseHeader) {
+		return []byte{}, invalidHeaderError
+	}
 
-	return responseBody, nil
+	return response[headerLength:], nil
 }
 
 func (c Client) SendPacket(address string, packet []byte) ([]byte, error) {
