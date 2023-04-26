@@ -14,7 +14,7 @@ type Command struct {
 }
 
 type Config struct {
-	BufferSize  uint16
+	BufferSize  uint32
 	Retries     uint8
 	TimeoutInMs uint16
 }
