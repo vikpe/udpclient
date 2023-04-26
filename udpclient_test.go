@@ -15,7 +15,7 @@ func TestClient_SendPacket(t *testing.T) {
 		client := udpclient.New()
 		response, err := client.SendPacket("foo:666", []byte{1, 2, 3})
 		assert.Equal(t, []byte{}, response)
-		assert.ErrorContains(t, err, "dial udp4: lookup foo:")
+		assert.ErrorContains(t, err, "server misbehaving")
 	})
 
 	t.Run("Write timeout", func(t *testing.T) {
@@ -70,7 +70,7 @@ func TestClient_SendCommand(t *testing.T) {
 	t.Run("Unknown host", func(t *testing.T) {
 		response, err := udpclient.New().SendCommand("foo:666", helloWorldCommand)
 		assert.Equal(t, []byte{}, response)
-		assert.ErrorContains(t, err, "dial udp4: lookup foo:")
+		assert.ErrorContains(t, err, "server misbehaving")
 	})
 
 	t.Run("Invalid repsonse header", func(t *testing.T) {
